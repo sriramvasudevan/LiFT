@@ -61,7 +61,7 @@ artifactory {
       publishIvy = true
     }
   }
-//    clientConfig.setIncludeEnvVars(false)
+  clientConfig.setIncludeEnvVars(false)
 }
 
 artifactoryPublish {
