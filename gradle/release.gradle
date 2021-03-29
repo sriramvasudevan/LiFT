@@ -1,0 +1,69 @@
+//Plugin jars are added to the buildscript classpath in the root build.gradle file
+apply plugin: "org.shipkit.shipkit-auto-version" //https://github.com/shipkit/shipkit-auto-version
+
+task checkGitHubToken {
+  doFirst {
+    if (System.getenv("GITHUB_TOKEN") == null) {
+      throw new Exception("Environment variable GITHUB_TOKEN not set.");
+    }
+    println "Using repository " + System.getenv("GITHUB_REPOSITORY")
+  }
+}
+
+apply plugin: "org.shipkit.shipkit-changelog" //https://github.com/shipkit/shipkit-changelog
+tasks.named("generateChangelog") {
+  dependsOn checkGitHubToken
+  previousRevision = project.ext.'shipkit-auto-version.previous-tag'
+  githubToken = System.getenv("GITHUB_TOKEN")
+  repository = "linkedin/LiFT"
+}
+
+apply plugin: "org.shipkit.shipkit-github-release" //https://github.com/shipkit/shipkit-changelog
+tasks.named("githubRelease") {
+  def genTask = tasks.named("generateChangelog").get()
+  dependsOn genTask
+  dependsOn checkGitHubToken
+  repository = genTask.repository
+  changelog = genTask.outputFile
+  githubToken = System.getenv("GITHUB_TOKEN")
+  newTagRevision = System.getenv("GITHUB_SHA")
+}
+
+apply plugin: "io.github.gradle-nexus.publish-plugin" //https://github.com/gradle-nexus/publish-plugin/
+nexusPublishing {
+  repositories {
+    if (System.getenv("SONATYPE_PWD")) {
+      sonatype {
+        username = System.getenv("SONATYPE_USER")
+        password = System.getenv("SONATYPE_PWD")
+      }
+    }
+  }
+}
+
+apply plugin: "maven-publish" // https://docs.gradle.org/current/userguide/publishing_maven.html
+apply plugin: "com.jfrog.artifactory" //https://www.jfrog.com/confluence/display/rtf/gradle+artifactory+plugin
+artifactory {
+  contextUrl = 'https://linkedin.jfrog.io/artifactory'
+  publish {
+    repository {
+      repoKey = 'LiFT'
+      username = System.getenv('ARTIFACTORY_USER')
+      password = System.getenv('ARTIFACTORY_KEY')
+      maven = true
+    }
+
+    defaults {
+      publications('liftJar')
+      publishBuildInfo = true
+      publishArtifacts = true
+      publishPom = true
+      publishIvy = true
+    }
+  }
+//    clientConfig.setIncludeEnvVars(false)
+}
+
+artifactoryPublish {
+  skip = project.hasProperty('artifactory.dryRun')
+}
