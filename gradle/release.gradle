@@ -1,5 +1,8 @@
 //Plugin jars are added to the buildscript classpath in the root build.gradle file
-apply plugin: "org.shipkit.shipkit-auto-version" //https://github.com/shipkit/shipkit-auto-version
+
+//////////////////////////////////
+// Token Verification Tasks
+//////////////////////////////////
 
 task checkGitHubToken {
   doFirst {
@@ -9,6 +12,25 @@ task checkGitHubToken {
     println "Using repository " + System.getenv("GITHUB_REPOSITORY")
   }
 }
+
+task verifyArtifactoryProperties {
+  doFirst {
+    if (!project.hasProperty('artifactory.dryRun')) {
+      if (System.getenv('ARTIFACTORY_USER') == null) {
+        throw new Exception("Environment variable ARTIFACTORY_USER not set.");
+      }
+      if (System.getenv('ARTIFACTORY_KEY') == null) {
+        throw new Exception("Environment variable ARTIFACTORY_KEY not set.");
+      }
+    }
+  }
+}
+
+//////////////////////////////////
+// Shipkit Tasks
+//////////////////////////////////
+
+apply plugin: "org.shipkit.shipkit-auto-version" //https://github.com/shipkit/shipkit-auto-version
 
 apply plugin: "org.shipkit.shipkit-changelog" //https://github.com/shipkit/shipkit-changelog
 tasks.named("generateChangelog") {
@@ -29,6 +51,10 @@ tasks.named("githubRelease") {
   newTagRevision = System.getenv("GITHUB_SHA")
 }
 
+//////////////////////////////////
+// Maven Central Config
+//////////////////////////////////
+
 apply plugin: "io.github.gradle-nexus.publish-plugin" //https://github.com/gradle-nexus/publish-plugin/
 nexusPublishing {
   repositories {
@@ -40,6 +66,10 @@ nexusPublishing {
     }
   }
 }
+
+//////////////////////////////////
+// LinkedIn Artifactory Config
+//////////////////////////////////
 
 apply plugin: "maven-publish" // https://docs.gradle.org/current/userguide/publishing_maven.html
 apply plugin: "com.jfrog.artifactory" //https://www.jfrog.com/confluence/display/rtf/gradle+artifactory+plugin
@@ -64,6 +94,37 @@ artifactory {
   clientConfig.setIncludeEnvVars(false)
 }
 
+//////////////////////////////////
+// Additional Release Tasks
+//////////////////////////////////
+
 artifactoryPublish {
   skip = project.hasProperty('artifactory.dryRun')
+}
+
+task artifactoryPublishAll {
+  description = "Runs 'artifactoryPublish' tasks from all projects"
+  mustRunAfter "githubRelease" // github release is easier to rollback so we run it first
+}
+
+tasks.named("closeAndReleaseStagingRepository") {
+  mustRunAfter "publishToSonatype"
+}
+
+task mavenCentralPublish {
+  description = "Publishes to Maven Central"
+  mustRunAfter "artifactoryPublishAll"
+  dependsOn "publishToSonatype", "closeAndReleaseStagingRepository"
+}
+
+allprojects {
+  tasks.matching { it.name == "artifactoryPublish" }.all {
+    it.dependsOn verifyArtifactoryProperties
+    artifactoryPublishAll.dependsOn it
+  }
+}
+
+task ciPerformRelease {
+  description = "Performs the release, intended to be ran on CI"
+  dependsOn "githubRelease", "artifactoryPublishAll", "mavenCentralPublish"
 }
