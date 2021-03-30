@@ -43,14 +43,15 @@ jobs:
         env:
           SCALA_VERSION: ${{ matrix.scala-version }}
           SPARK_VERSION: ${{ matrix.spark-version }}
-        run: ./gradlew build publishToMavenLocal artifactoryPublish -s -Partifactory.dryRun -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
+        #run: ./gradlew build publishToMavenLocal artifactoryPublish -s -Partifactory.dryRun -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
+        run: ./gradlew build publishToMavenLocal -s -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
       - name: Release
         # Release job, only for pushes to the main development branch
-        if: github.event_name == 'push'
-          && github.ref == 'refs/heads/main'
-          && github.repository == 'linkedin/LiFT'
-          && !contains(toJSON(github.event.commits.*.message), '[skip release]')
-        run: ./gradlew ciPerformRelease -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
+        #if: github.event_name == 'push'
+        #  && github.ref == 'refs/heads/main'
+        #  && github.repository == 'linkedin/LiFT'
+        #  && !contains(toJSON(github.event.commits.*.message), '[skip release]')
+        run: ./gradlew githubRelease publishToSonatype closeAndReleaseStagingRepository -s -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
         env:
           SCALA_VERSION: ${{ matrix.scala-version }}
           SPARK_VERSION: ${{ matrix.spark-version }}
