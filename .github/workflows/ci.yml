@@ -50,13 +50,14 @@ jobs:
           && github.ref == 'refs/heads/main'
           && github.repository == 'linkedin/LiFT'
           && !contains(toJSON(github.event.commits.*.message), '[skip release]')
-
-        run: ./gradlew ciPerformRelease
+        run: ./gradlew ciPerformRelease -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
         env:
+          SCALA_VERSION: ${{ matrix.scala-version }}
+          SPARK_VERSION: ${{ matrix.spark-version }}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          SONATYPE_USER: ${{secrets.SONATYPE_USER}}
-          SONATYPE_PWD: ${{secrets.SONATYPE_PWD}}
-          PGP_KEY: ${{secrets.PGP_KEY}}
-          PGP_PWD: ${{secrets.PGP_PWD}}
+          SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
+          SONATYPE_PWD: ${{ secrets.SONATYPE_PWD }}
+          PGP_KEY: ${{ secrets.PGP_KEY }}
+          PGP_PWD: ${{ secrets.PGP_PWD }}
           ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
           ARTIFACTORY_KEY: ${{ secrets.ARTIFACTORY_KEY }}
