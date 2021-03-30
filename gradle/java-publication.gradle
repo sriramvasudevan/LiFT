@@ -81,6 +81,6 @@ apply plugin: 'signing' //https://docs.gradle.org/current/userguide/signing_plug
 signing {
   if (System.getenv("PGP_KEY")) {
     useInMemoryPgpKeys(System.getenv("PGP_KEY"), System.getenv("PGP_PWD"))
-    sign publishing.publications.javaLibrary
+    sign publishing.publications.liftJar
   }
 }
