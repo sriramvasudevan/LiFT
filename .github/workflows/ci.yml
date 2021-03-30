@@ -43,6 +43,8 @@ jobs:
         env:
           SCALA_VERSION: ${{ matrix.scala-version }}
           SPARK_VERSION: ${{ matrix.spark-version }}
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_KEY: ${{ secrets.ARTIFACTORY_KEY }}          
         #run: ./gradlew build publishToMavenLocal artifactoryPublish -s -Partifactory.dryRun -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
         run: ./gradlew build publishToMavenLocal -s -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
       - name: Release
@@ -51,14 +53,22 @@ jobs:
         #  && github.ref == 'refs/heads/main'
         #  && github.repository == 'linkedin/LiFT'
         #  && !contains(toJSON(github.event.commits.*.message), '[skip release]')
-        run: ./gradlew githubRelease publishToSonatype closeAndReleaseStagingRepository -s -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
+        run: ./gradlew publishToSonatype closeAndReleaseStagingRepository -s -PscalaVersion=$SCALA_VERSION -PsparkVersion=$SPARK_VERSION
         env:
           SCALA_VERSION: ${{ matrix.scala-version }}
           SPARK_VERSION: ${{ matrix.spark-version }}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
           SONATYPE_PWD: ${{ secrets.SONATYPE_PWD }}
           PGP_KEY: ${{ secrets.PGP_KEY }}
           PGP_PWD: ${{ secrets.PGP_PWD }}
           ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
           ARTIFACTORY_KEY: ${{ secrets.ARTIFACTORY_KEY }}
+      - name: GitHub Release
+        # Release job, only for pushes to the main development branch
+        #if: github.event_name == 'push'
+        #  && github.ref == 'refs/heads/main'
+        #  && github.repository == 'linkedin/LiFT'
+        #  && !contains(toJSON(github.event.commits.*.message), '[skip release]')
+        run: ./gradlew githubRelease -s
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
